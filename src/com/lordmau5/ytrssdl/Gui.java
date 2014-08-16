@@ -24,6 +24,7 @@ public class Gui extends JFrame {
     public JButton addCategory;
     public JButton removeCategory;
     public JButton fetchSelectedChannelButton;
+    public JLabel loadingChannels;
 
     public Gui() {
         super("YT RSS Downloader");
@@ -31,7 +32,7 @@ public class Gui extends JFrame {
         setContentPane(panel1);
 
         pack();
-        setSize(400, 200);
+        setSize(420, 200);
         setResizable(false);
         setLocation(50, 50);
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
@@ -133,7 +134,7 @@ public class Gui extends JFrame {
                 if(!cool)
                     return;
 
-                categories.addItem(new Category(n));
+                categories.addItem(n);
                 categories.setSelectedIndex(categories.getItemCount() - 1);
 
                 categories.setEnabled(true);
@@ -158,6 +159,7 @@ public class Gui extends JFrame {
 
                     if(categories.getItemCount() == 0) {
                         categories.setEnabled(false);
+                        addChannel.setEnabled(false);
                         removeCategory.setEnabled(false);
                         fetchCategory.setEnabled(false);
                         fetchAllCats.setEnabled(false);

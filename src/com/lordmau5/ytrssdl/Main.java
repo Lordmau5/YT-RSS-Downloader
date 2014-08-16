@@ -87,7 +87,7 @@ public class Main {
                 while((line = br.readLine()) != null) {
                     if(!line.contains("&"))
                         continue;
-                    
+
                     String[] channelInfo = line.split("&");
                     if(!hasCategory(channelInfo[0].toLowerCase())) {
                         categories.put(channelInfo[0].toLowerCase(), new Category(channelInfo[0]));
@@ -96,6 +96,7 @@ public class Main {
                         gui.categories.setEnabled(true);
                         gui.removeCategory.setEnabled(true);
                         gui.fetchCategory.setEnabled(true);
+                        gui.addChannel.setEnabled(true);
 
                         if(firstCategory == null)
                             firstCategory = channelInfo[0];
@@ -122,6 +123,7 @@ public class Main {
             }
         }
         gui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        gui.loadingChannels.setText("");
     }
 
     public static void saveChannels() {
@@ -156,7 +158,7 @@ public class Main {
         while(more) {
             startFresh = false;
 
-            String url = "http://gdata.youtube.com/feeds/base/users/" + channel.channelName + "/uploads?client=ytapi-youtube-rss-redirect&orderby=updated&alt=rss&v=2&max-results=" + max_Res + "&start-index=" + num;
+            String url = "http://gdata.youtube.com/feeds/base/users/" + channel.channelName + "/uploads?client=ytapi-youtube-rss-redirect&alt=rss&v=2&max-results=" + max_Res + "&start-index=" + num;
             if(!containsItem(url)) {
                 break;
             }
@@ -220,7 +222,7 @@ public class Main {
     public static void fetchCategory(String categoryName) {
         Category category = categories.get(categoryName.toLowerCase());
         String updateString = "";
-        for(YTChannel channel : categories.get(category.toString().toLowerCase()).getChannels()) {
+        for(YTChannel channel : category.getChannels()) {
             String fetch = fetchUpdate(channel);
             if(!fetch.equals("NaN"))
                 updateString = updateString + fetch;
@@ -310,7 +312,9 @@ public class Main {
             else
                 return false;
         } catch (IOException e) {
-            e.printStackTrace();
+            if(e.getMessage().contains("403 for URL")) {
+                return containsItem(parserURL);
+            }
         }
         return false;
     }
