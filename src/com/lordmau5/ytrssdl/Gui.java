@@ -35,6 +35,9 @@ public class Gui extends JFrame {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String n = JOptionPane.showInputDialog(panel1, "Enter the name of the Youtube Channel you want to add:");
+                if(n == null)
+                    return;
+
                 if(!Main.isProperYoutubeChannel(n)) {
                     JOptionPane.showMessageDialog(panel1, "The channel you entered was not found.");
                     return;

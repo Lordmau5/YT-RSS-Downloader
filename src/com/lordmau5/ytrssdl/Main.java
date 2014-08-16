@@ -124,7 +124,6 @@ public class Main {
     public static String fetchUpdate(YTChannel channel) {
         List<String> newVideos = new ArrayList<>();
         DateFormat checked = new DateFormat(calendar.get(Calendar.DAY_OF_MONTH), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.YEAR), calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), calendar.get(Calendar.SECOND));
-        System.out.println(checked.toString());
         YTRSSFeedParser parser = null;
         YTFeed feed = null;
 
@@ -147,6 +146,8 @@ public class Main {
                 if(e.getMessage().contains("400 for URL")) {
                     startFresh = true;
                     num -= 1;
+                    if(num == 0)
+                        break;
                 }
             }
             if(startFresh || feed == null)
