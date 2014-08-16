@@ -9,6 +9,7 @@ import java.io.*;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.*;
+import java.util.Timer;
 
 /**
  * Created by Lordmau5 on 15.08.2014.
@@ -123,7 +124,8 @@ public class Main {
             }
         }
         gui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        gui.loadingChannels.setText("");
+        gui.labelThing.setText("");
+        gui.buttonFunc = true;
     }
 
     public static void saveChannels() {
@@ -144,113 +146,165 @@ public class Main {
         }
     }
 
-    public static String fetchUpdate(YTChannel channel) {
-        List<String> newVideos = new ArrayList<>();
-        DateFormat checked = new DateFormat(calendar.get(Calendar.DAY_OF_MONTH), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.YEAR), calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), calendar.get(Calendar.SECOND));
-        YTRSSFeedParser parser = null;
-        YTFeed feed = null;
+    public static String returnText;
+    public static String fetchUpdate(final YTChannel channel) {
+        returnText = "NaN";
+        Thread thread = new Thread(){
+            @Override
+            public synchronized void start() {
+                super.start();
 
-        int num = 1;
-        int max_Res = 10;
-        boolean more = true;
-        boolean startFresh = false;
+                List<String> newVideos = new ArrayList<>();
+                DateFormat checked = new DateFormat(calendar.get(Calendar.DAY_OF_MONTH), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.YEAR), calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), calendar.get(Calendar.SECOND));
+                YTRSSFeedParser parser = null;
+                YTFeed feed = null;
 
-        while(more) {
-            startFresh = false;
+                int num = 1;
+                int max_Res = 10;
+                boolean more = true;
+                boolean startFresh = false;
 
-            String url = "http://gdata.youtube.com/feeds/base/users/" + channel.channelName + "/uploads?client=ytapi-youtube-rss-redirect&alt=rss&v=2&max-results=" + max_Res + "&start-index=" + num;
-            if(!containsItem(url)) {
-                break;
-            }
-            parser = new YTRSSFeedParser(url);
-            try {
-                feed = parser.readFeed();
-            } catch (Exception e) {
-                if(e.getMessage().contains("400 for URL")) {
-                    startFresh = true;
-                    num -= 1;
-                    if(num == 0)
+                while(more) {
+                    startFresh = false;
+
+                    String url = "http://gdata.youtube.com/feeds/base/users/" + channel.channelName + "/uploads?client=ytapi-youtube-rss-redirect&alt=rss&v=2&max-results=" + max_Res + "&start-index=" + num;
+                    if(!containsItem(url)) {
                         break;
-                }
-            }
-            if(startFresh || feed == null)
-                continue;
+                    }
+                    parser = new YTRSSFeedParser(url);
+                    try {
+                        feed = parser.readFeed();
+                    } catch (Exception e) {
+                        if(e.getMessage().contains("400 for URL")) {
+                            startFresh = true;
+                            num -= 1;
+                            if(num == 0)
+                                break;
+                        }
+                    }
+                    if(startFresh || feed == null)
+                        continue;
 
-            int sizeBefore = newVideos.size();
-            for(YTFeedMsg msg : feed.getMessages()) {
-                if(channel.lastChecked.isEarlier(msg.pubDate)) {
-                    if(!newVideos.contains(msg.link))
-                        newVideos.add(msg.link);
+                    int sizeBefore = newVideos.size();
+                    for(YTFeedMsg msg : feed.getMessages()) {
+                        if(channel.lastChecked.isEarlier(msg.pubDate)) {
+                            if(!newVideos.contains(msg.link))
+                                newVideos.add(msg.link);
+                        }
+                        else {
+                            more = false;
+                            break;
+                        }
+                    }
+                    if(sizeBefore == newVideos.size()) {
+                        break;
+                    }
+
+                    if(more)
+                        num += 10;
+                }
+
+                File newvids = new File(System.getProperty("user.dir") + "\\channels\\" + channel.channelName + ".txt");
+                if(newVideos.isEmpty()) {
+                    if(newvids.exists())
+                        newvids.delete();
                 }
                 else {
-                    more = false;
-                    break;
+                    try {
+                        FileWriter writer = new FileWriter(newvids, false);
+                        for(String link : newVideos) {
+                            writer.write(link + "\n");
+                        }
+                        writer.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
                 }
+
+                channel.lastChecked = checked;
+
+                if(!newVideos.isEmpty())
+                    returnText = newVideos.size() + " new videos from " + channel.channelName + "\n";
             }
-            if(sizeBefore == newVideos.size()) {
-                break;
-            }
-
-            if(more)
-                num += 10;
-        }
-
-        File newvids = new File(System.getProperty("user.dir") + "\\channels\\" + channel.channelName + ".txt");
-        if(newVideos.isEmpty()) {
-            if(newvids.exists())
-                newvids.delete();
-        }
-        else {
-            try {
-                FileWriter writer = new FileWriter(newvids, false);
-                for(String link : newVideos) {
-                    writer.write(link + "\n");
-                }
-                writer.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-        channel.lastChecked = checked;
-
-        if(!newVideos.isEmpty())
-            return newVideos.size() + " new videos from " + channel.channelName + "\n";
-        return "NaN";
+        };
+        thread.start();
+        return returnText;
     }
 
-    public static void fetchCategory(String categoryName) {
-        Category category = categories.get(categoryName.toLowerCase());
-        String updateString = "";
-        for(YTChannel channel : category.getChannels()) {
-            String fetch = fetchUpdate(channel);
-            if(!fetch.equals("NaN"))
-                updateString = updateString + fetch;
-        }
+    public static void fetchCategory(final String categoryName) {
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                super.run();
 
-        if(!updateString.isEmpty()) {
-            JOptionPane.showMessageDialog(gui.panel1, updateString);
-        }
-        else {
-            JOptionPane.showMessageDialog(gui.panel1, "No new videos from your channels.\nCheck back later!");
-        }
+                Category category = categories.get(categoryName.toLowerCase());
+                String updateString = "";
+                int fetched = 0;
+                int size = category.getChannels().size();
+                gui.labelThing.setText("Fetching channel 0/" + size);
+                for(YTChannel channel : category.getChannels()) {
+                    fetched++;
+                    gui.labelThing.setText("Fetching channel " + fetched + "/" + size);
+
+                    String fetch = fetchUpdate(channel);
+                    if(!fetch.equals("NaN"))
+                        updateString = updateString + fetch;
+                }
+
+                if(!updateString.isEmpty()) {
+                    JOptionPane.showMessageDialog(gui.panel1, updateString);
+                }
+                else {
+                    JOptionPane.showMessageDialog(gui.panel1, "No new videos from your channels.\nCheck back later!");
+                }
+                gui.labelThing.setText("");
+                gui.buttonFunc = true;
+                gui.categories.setEnabled(true);
+                gui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            }
+        };
+        gui.buttonFunc = false;
+        gui.categories.setEnabled(false);
+        gui.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        thread.start();
     }
 
     public static void fetchAllCategories() {
-        String updateString = "";
-        for(Map.Entry<String, Category> entry : categories.entrySet())
-            for(YTChannel channel : categories.get(entry.getValue().toString().toLowerCase()).getChannels()) {
-                String fetch = fetchUpdate(channel);
-                if(!fetch.equals("NaN"))
-                    updateString = updateString + fetch;
-            }
+        Thread thread = new Thread() {
+            @Override
+            public void run() {
+                super.run();
 
-        if(!updateString.isEmpty()) {
-            JOptionPane.showMessageDialog(gui.panel1, updateString);
-        }
-        else {
-            JOptionPane.showMessageDialog(gui.panel1, "No new videos from your channels.\nCheck back later!");
-        }
+                String updateString = "";
+                int fetched = 0;
+                int size = categories.size();
+                gui.labelThing.setText("Fetching category 0/" + size);
+                for(Map.Entry<String, Category> entry : categories.entrySet()) {
+                    fetched++;
+                    gui.labelThing.setText("Fetching category " + fetched + "/" + size);
+                    
+                    for (YTChannel channel : categories.get(entry.getValue().toString().toLowerCase()).getChannels()) {
+                        String fetch = fetchUpdate(channel);
+                        if (!fetch.equals("NaN"))
+                            updateString = updateString + fetch;
+                    }
+                }
+                if(!updateString.isEmpty()) {
+                    JOptionPane.showMessageDialog(gui.panel1, updateString);
+                }
+                else {
+                    JOptionPane.showMessageDialog(gui.panel1, "No new videos from your channels.\nCheck back later!");
+                }
+                gui.labelThing.setText("");
+                gui.buttonFunc = true;
+                gui.categories.setEnabled(true);
+                gui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            }
+        };
+        gui.buttonFunc = false;
+        gui.categories.setEnabled(false);
+        gui.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        thread.start();
     }
 
     public static boolean addChannel(String channelName) {

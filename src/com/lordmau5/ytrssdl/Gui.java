@@ -24,7 +24,9 @@ public class Gui extends JFrame {
     public JButton addCategory;
     public JButton removeCategory;
     public JButton fetchSelectedChannelButton;
-    public JLabel loadingChannels;
+    public JLabel labelThing;
+
+    public boolean buttonFunc = false;
 
     public Gui() {
         super("YT RSS Downloader");
@@ -40,6 +42,9 @@ public class Gui extends JFrame {
         addChannel.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                if(!buttonFunc)
+                    return;
+
                 String n = JOptionPane.showInputDialog(panel1, "Enter the name of the Youtube Channel you want to add:");
                 if(n == null)
                     return;
@@ -72,6 +77,9 @@ public class Gui extends JFrame {
         removeChannel.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                if(!buttonFunc)
+                    return;
+
                 Object[] options = {"Yes", "No"};
                 int n = JOptionPane.showOptionDialog(panel1, "Are you sure you want to remove this channel?", "Remove Channel", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[1]);
                 if(n == 0) {
@@ -121,6 +129,9 @@ public class Gui extends JFrame {
         addCategory.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                if(!buttonFunc)
+                    return;
+
                 String n = JOptionPane.showInputDialog(panel1, "Enter the name of the Category you want to add:");
                 if(n == null)
                     return;
@@ -138,6 +149,7 @@ public class Gui extends JFrame {
                 categories.setSelectedIndex(categories.getItemCount() - 1);
 
                 categories.setEnabled(true);
+                addChannel.setEnabled(true);
                 removeCategory.setEnabled(true);
                 fetchCategory.setEnabled(true);
                 fetchSelectedChannelButton.setEnabled(true);
@@ -148,6 +160,9 @@ public class Gui extends JFrame {
         removeCategory.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                if(!buttonFunc)
+                    return;
+
                 Object[] options = {"Yes", "No"};
                 int n = JOptionPane.showOptionDialog(panel1, "Are you sure you want to remove this category?\nAll the channels that are in it will be removed!", "Remove Channel", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null, options, options[1]);
                 if(n == 0) {
@@ -172,6 +187,9 @@ public class Gui extends JFrame {
         fetchAllCats.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                if(!buttonFunc)
+                    return;
+
                 Main.fetchAllCategories();
             }
         });
@@ -179,6 +197,9 @@ public class Gui extends JFrame {
         fetchCategory.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                if(!buttonFunc)
+                    return;
+
                 Main.fetchCategory(categories.getSelectedItem().toString());
             }
         });
@@ -186,6 +207,9 @@ public class Gui extends JFrame {
         fetchSelectedChannelButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                if(!buttonFunc)
+                    return;
+
                 String update = Main.fetchUpdate((YTChannel) channels.getSelectedItem());
                 if(update.equals("NaN"))
                     update = "No new videos from \"" + ((YTChannel)channels.getSelectedItem()).channelName + "\"\nCheck back later!";
