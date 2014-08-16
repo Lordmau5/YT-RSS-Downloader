@@ -85,6 +85,9 @@ public class Main {
                 String line;
                 String firstCategory = null;
                 while((line = br.readLine()) != null) {
+                    if(!line.contains("&"))
+                        continue;
+                    
                     String[] channelInfo = line.split("&");
                     if(!hasCategory(channelInfo[0].toLowerCase())) {
                         categories.put(channelInfo[0].toLowerCase(), new Category(channelInfo[0]));
