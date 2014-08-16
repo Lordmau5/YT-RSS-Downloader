@@ -15,11 +15,15 @@ import java.util.*;
  */
 public class Main {
 
-    private static List<YTChannel> channels = new ArrayList<>();
+    public static Map<String, Category> categories = new HashMap<>();
 
     public static Calendar calendar;
 
     private static Gui gui;
+
+    private boolean hasCategory(String categoryName) {
+        return categories.containsKey(categoryName);
+    }
 
     public static void main(String[] args) {
         new Main();
@@ -79,22 +83,35 @@ public class Main {
             try {
                 BufferedReader br = new BufferedReader(new FileReader(channelList));
                 String line;
+                String firstCategory = null;
                 while((line = br.readLine()) != null) {
-                    if(!channels.contains(line)) {
-                        String[] channelInfo = line.split("-");
-                        if(!isProperYoutubeChannel(channelInfo[0]))
-                            continue;
+                    String[] channelInfo = line.split("&");
+                    if(!hasCategory(channelInfo[0].toLowerCase())) {
+                        categories.put(channelInfo[0].toLowerCase(), new Category(channelInfo[0]));
 
-                        YTChannel channel = new YTChannel(channelInfo[0], channelInfo[1]);
+                        gui.categories.addItem(channelInfo[0]);
+                        gui.categories.setEnabled(true);
+                        gui.removeCategory.setEnabled(true);
+                        gui.fetchCategory.setEnabled(true);
 
-                        channels.add(channel);
+                        if(firstCategory == null)
+                            firstCategory = channelInfo[0];
+                    }
+
+                    if(!isProperYoutubeChannel(channelInfo[1]))
+                        continue;
+
+                    YTChannel channel = new YTChannel(channelInfo[1], channelInfo[2]);
+
+                    categories.get(channelInfo[0].toLowerCase()).addChannel(channel);
+                    if(channelInfo[0].equals(firstCategory)) {
                         gui.channels.addItem(channel);
                         gui.channels.setEnabled(true);
                         gui.removeChannel.setEnabled(true);
                         gui.fetchSelectedChannelButton.setEnabled(true);
-                        gui.fetchUpdates.setEnabled(true);
-                        System.out.println("Channel \"" + line + "\" added.");
+                        gui.fetchAllCats.setEnabled(true);
                     }
+                    System.out.println("Channel \"" + line + "\" added.");
                 }
                 br.close();
             } catch (IOException e) {
@@ -107,13 +124,14 @@ public class Main {
     public static void saveChannels() {
         File channelFolder = new File(System.getProperty("user.dir") + "\\channels");
         File channelList = new File(channelFolder.getAbsolutePath() + "\\channels.txt");
-        if(channels.isEmpty()) {
+        if(categories.isEmpty()) {
             channelList.delete();
         }
         try {
             FileWriter writer = new FileWriter(channelList, false);
-            for(YTChannel channel : channels) {
-                writer.write(channel.channelName + "-" + channel.lastChecked.saveFormat() + "\n");
+            for(Map.Entry<String, Category> entry : categories.entrySet()) {
+                for(YTChannel channel : entry.getValue().getChannels())
+                    writer.write(entry.getValue() + "&" + channel.channelName + "&" + channel.lastChecked.saveFormat() + "\n");
             }
             writer.close();
         } catch (IOException e1) {
@@ -196,9 +214,10 @@ public class Main {
         return "NaN";
     }
 
-    public static void fetchUpdates() {
+    public static void fetchCategory(String categoryName) {
+        Category category = categories.get(categoryName.toLowerCase());
         String updateString = "";
-        for(YTChannel channel : channels) {
+        for(YTChannel channel : categories.get(category.toString().toLowerCase()).getChannels()) {
             String fetch = fetchUpdate(channel);
             if(!fetch.equals("NaN"))
                 updateString = updateString + fetch;
@@ -212,25 +231,45 @@ public class Main {
         }
     }
 
-    public static boolean addChannel(String channelName) {
-        for(YTChannel channel : channels) {
-            if(channel.channelName.toLowerCase().equals(channelName.toLowerCase())) {
-                return false;
+    public static void fetchAllCategories() {
+        String updateString = "";
+        for(Map.Entry<String, Category> entry : categories.entrySet())
+            for(YTChannel channel : categories.get(entry.getValue().toString().toLowerCase()).getChannels()) {
+                String fetch = fetchUpdate(channel);
+                if(!fetch.equals("NaN"))
+                    updateString = updateString + fetch;
             }
+
+        if(!updateString.isEmpty()) {
+            JOptionPane.showMessageDialog(gui.panel1, updateString);
         }
-        channels.add(new YTChannel(channelName, new DateFormat(calendar.get(Calendar.DAY_OF_MONTH), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.YEAR), calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), calendar.get(Calendar.SECOND))));
-        return true;
+        else {
+            JOptionPane.showMessageDialog(gui.panel1, "No new videos from your channels.\nCheck back later!");
+        }
+    }
+
+    public static boolean addChannel(String channelName) {
+        return categories.get(gui.categories.getSelectedItem().toString().toLowerCase()).addChannel(new YTChannel(channelName, new DateFormat(calendar.get(Calendar.DAY_OF_MONTH), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.YEAR), calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), calendar.get(Calendar.SECOND))));
     }
 
     public static boolean removeChannel(String channelName) {
-        for(int i=0; i<channels.size(); i++) {
-            YTChannel channel = channels.get(i);
-            if(channel.channelName.toLowerCase().equals(channelName.toLowerCase())) {
-                channels.remove(i);
-                return true;
-            }
-        }
-        return false;
+        return categories.get(gui.categories.getSelectedItem().toString().toLowerCase()).removeChannel(channelName);
+    }
+
+    public static boolean addCategory(String name) {
+        if(categories.containsKey(name.toLowerCase()))
+            return false;
+
+        categories.put(name.toLowerCase(), new Category(name));
+        return true;
+    }
+
+    public static boolean removeCategory(String name) {
+        if(!categories.containsKey(name.toLowerCase()))
+            return false;
+
+        categories.remove(name.toLowerCase());
+        return true;
     }
 
     public static boolean isProperYoutubeChannel(String channelName) {
