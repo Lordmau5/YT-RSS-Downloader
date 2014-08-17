@@ -25,6 +25,7 @@ public class Gui extends JFrame {
     public JButton removeCategory;
     public JButton fetchSelectedChannelButton;
     public JLabel labelThing;
+    public JLabel loadingSub;
 
     public boolean buttonFunc = false;
 
@@ -33,8 +34,8 @@ public class Gui extends JFrame {
 
         setContentPane(panel1);
 
+        setSize(420, 222);
         pack();
-        setSize(420, 200);
         setResizable(false);
         setLocation(50, 50);
         setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
@@ -210,11 +211,32 @@ public class Gui extends JFrame {
                 if(!buttonFunc)
                     return;
 
-                String update = Main.fetchUpdate((YTChannel) channels.getSelectedItem());
-                if(update.equals("NaN"))
-                    update = "No new videos from \"" + ((YTChannel)channels.getSelectedItem()).channelName + "\"\nCheck back later!";
+                Main.fetchUpdate((YTChannel) channels.getSelectedItem(), true);
+                new Thread(){
+                    @Override
+                    public void run() {
+                        super.run();
 
-                JOptionPane.showMessageDialog(panel1, update);
+                        while(Main.isWorking) {
+                            try {
+                                sleep(500);
+                            } catch (InterruptedException whatever) {
+                                whatever.printStackTrace();
+                            }
+                        }
+
+                        if(Main.getReturnText().equals("NaN"))
+                            Main.setReturnText("No new videos from \"" + ((YTChannel)channels.getSelectedItem()).channelName + "\"\nCheck back later!");
+
+                        JOptionPane.showMessageDialog(panel1, Main.getReturnText());
+
+                        loadingSub.setText("");
+                        buttonFunc = true;
+                        categories.setEnabled(true);
+                        channels.setEnabled(true);
+                        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+                    }
+                }.start();
             }
         });
     }

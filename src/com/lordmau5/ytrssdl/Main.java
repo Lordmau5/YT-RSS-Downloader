@@ -146,13 +146,22 @@ public class Main {
         }
     }
 
-    public static String returnText;
-    public static String fetchUpdate(final YTChannel channel) {
-        returnText = "NaN";
+    public static void setReturnText(String text) {
+        returnText = text;
+    }
+
+    public static String getReturnText() {
+        return returnText;
+    }
+
+    public static boolean isWorking = false;
+    public static String returnText = null;
+    public static void fetchUpdate(final YTChannel channel, final boolean isSelectedOnly) {
+        returnText = null;
         Thread thread = new Thread(){
             @Override
-            public synchronized void start() {
-                super.start();
+            public synchronized void run() {
+                super.run();
 
                 List<String> newVideos = new ArrayList<>();
                 DateFormat checked = new DateFormat(calendar.get(Calendar.DAY_OF_MONTH), calendar.get(Calendar.MONTH) + 1, calendar.get(Calendar.YEAR), calendar.get(Calendar.HOUR_OF_DAY), calendar.get(Calendar.MINUTE), calendar.get(Calendar.SECOND));
@@ -188,8 +197,10 @@ public class Main {
                     int sizeBefore = newVideos.size();
                     for(YTFeedMsg msg : feed.getMessages()) {
                         if(channel.lastChecked.isEarlier(msg.pubDate)) {
-                            if(!newVideos.contains(msg.link))
+                            if(!newVideos.contains(msg.link)) {
                                 newVideos.add(msg.link);
+                                gui.loadingSub.setText("Fetching " + newVideos.size() + " videos...");
+                            }
                         }
                         else {
                             more = false;
@@ -225,10 +236,21 @@ public class Main {
 
                 if(!newVideos.isEmpty())
                     returnText = newVideos.size() + " new videos from " + channel.channelName + "\n";
+                else
+                    returnText = "NaN";
+
+                isWorking = false;
+                gui.loadingSub.setText("");
             }
         };
         thread.start();
-        return returnText;
+        if(isSelectedOnly) {
+            gui.buttonFunc = false;
+            gui.categories.setEnabled(false);
+            gui.channels.setEnabled(false);
+            gui.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
+        }
+        isWorking = true;
     }
 
     public static void fetchCategory(final String categoryName) {
@@ -246,9 +268,16 @@ public class Main {
                     fetched++;
                     gui.labelThing.setText("Fetching channel " + fetched + "/" + size);
 
-                    String fetch = fetchUpdate(channel);
-                    if(!fetch.equals("NaN"))
-                        updateString = updateString + fetch;
+                    fetchUpdate(channel, false);
+                    while(isWorking) {
+                        try {
+                            Thread.sleep(500);
+                        } catch (InterruptedException e) {
+                            e.printStackTrace();
+                        }
+                    }
+                    if(!returnText.equals("NaN"))
+                        updateString = updateString + returnText;
                 }
 
                 if(!updateString.isEmpty()) {
@@ -258,6 +287,7 @@ public class Main {
                     JOptionPane.showMessageDialog(gui.panel1, "No new videos from your channels.\nCheck back later!");
                 }
                 gui.labelThing.setText("");
+                gui.loadingSub.setText("");
                 gui.buttonFunc = true;
                 gui.categories.setEnabled(true);
                 gui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -276,17 +306,30 @@ public class Main {
                 super.run();
 
                 String updateString = "";
-                int fetched = 0;
-                int size = categories.size();
-                gui.labelThing.setText("Fetching category 0/" + size);
+                int fetched_cat = 0;
+                int fetched_chan = 0;
+                int size_cat = categories.size();
+                int size_chan;
                 for(Map.Entry<String, Category> entry : categories.entrySet()) {
-                    fetched++;
-                    gui.labelThing.setText("Fetching category " + fetched + "/" + size);
-                    
-                    for (YTChannel channel : categories.get(entry.getValue().toString().toLowerCase()).getChannels()) {
-                        String fetch = fetchUpdate(channel);
-                        if (!fetch.equals("NaN"))
-                            updateString = updateString + fetch;
+                    fetched_cat++;
+
+                    fetched_chan = 0;
+                    List<YTChannel> channels = categories.get(entry.getValue().toString().toLowerCase()).getChannels();
+                    size_chan = channels.size();
+                    for (YTChannel channel : channels) {
+                        fetched_chan++;
+                        gui.labelThing.setText("Fetching category " + fetched_cat + "/" + size_cat + " - Channel " + fetched_chan + "/" + size_chan);
+
+                        fetchUpdate(channel, false);
+                        while(isWorking) {
+                            try {
+                                Thread.sleep(500);
+                            } catch (InterruptedException e) {
+                                e.printStackTrace();
+                            }
+                        }
+                        if(!returnText.equals("NaN"))
+                            updateString = updateString + returnText;
                     }
                 }
                 if(!updateString.isEmpty()) {
@@ -296,6 +339,7 @@ public class Main {
                     JOptionPane.showMessageDialog(gui.panel1, "No new videos from your channels.\nCheck back later!");
                 }
                 gui.labelThing.setText("");
+                gui.loadingSub.setText("");
                 gui.buttonFunc = true;
                 gui.categories.setEnabled(true);
                 gui.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
