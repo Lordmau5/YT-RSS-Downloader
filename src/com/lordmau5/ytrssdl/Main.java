@@ -169,7 +169,7 @@ public class Main {
                 YTFeed feed = null;
 
                 int num = 1;
-                int max_Res = 10;
+                int max_Res = 50;
                 boolean more = true;
                 boolean startFresh = false;
 
@@ -212,7 +212,7 @@ public class Main {
                     }
 
                     if(more)
-                        num += 10;
+                        num += 50;
                 }
 
                 File newvids = new File(System.getProperty("user.dir") + "\\channels\\" + channel.channelName + ".txt");
